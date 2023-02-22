@@ -26,6 +26,12 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
  * project.
  */
 public class Robot extends TimedRobot {
+  private enum TestMode {
+    RELATIVE,
+    ABSOLUTE
+  }
+  TestMode m_mode = TestMode.ABSOLUTE;
+
   Joystick m_joystick = new Joystick(0);
   public static final int ENCODER_ID = 3;
   public static final int MOTOR_ID = 1;
@@ -51,7 +57,9 @@ public class Robot extends TimedRobot {
     config.sensorDirection = false;
     config.initializationStrategy = SensorInitializationStrategy.BootToAbsolutePosition;
     m_encoder.configAllSettings(config);
-    m_pid.enableContinuousInput(-180, 180);
+    if (m_mode == TestMode.ABSOLUTE) {
+      m_pid.enableContinuousInput(-180, 180);
+    }
   }
 
   @Override
@@ -68,8 +76,11 @@ public class Robot extends TimedRobot {
 
   @Override
   public void teleopPeriodic() {
-    absoluteTest();
-    // relativeTest();
+    if (m_mode == TestMode.ABSOLUTE) {
+      absoluteTest();
+    } else {
+      relativeTest();
+    }
     SmartDashboard.putNumber("relative position", m_encoder.getPosition());
     SmartDashboard.putNumber("Absolute Position", m_encoder.getAbsolutePosition());
     SmartDashboard.putNumber("Difference", m_encoder.getPosition() - m_encoder.getAbsolutePosition());
