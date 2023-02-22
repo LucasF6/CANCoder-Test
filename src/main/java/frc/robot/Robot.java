@@ -35,8 +35,10 @@ public class Robot extends TimedRobot {
   Joystick m_joystick = new Joystick(0);
   public static final int ENCODER_ID = 3;
   public static final int MOTOR_ID = 1;
+  public static final int FOLLOW_MOTOR_ID = 2;
   WPI_CANCoder m_encoder;
-  CANSparkMax m_motor;
+  CANSparkMax m_leadMotor;
+  CANSparkMax m_followMotor;
   PIDController m_pid = new PIDController(0, 0, 0);
   double m_setpoint = 0;
   
@@ -47,7 +49,10 @@ public class Robot extends TimedRobot {
   @Override
   public void robotInit() {
     m_encoder = new WPI_CANCoder(ENCODER_ID);
-    m_motor = new CANSparkMax(MOTOR_ID, MotorType.kBrushless);
+    m_leadMotor = new CANSparkMax(MOTOR_ID, MotorType.kBrushless);
+    m_followMotor = new CANSparkMax(FOLLOW_MOTOR_ID, MotorType.kBrushless);
+    m_followMotor.follow(m_leadMotor);
+
     CANCoderConfiguration config = new CANCoderConfiguration();
     config.sensorCoefficient = 360/4096;
     config.unitString = "degrees";
@@ -81,11 +86,12 @@ public class Robot extends TimedRobot {
     } else {
       relativeTest();
     }
-    SmartDashboard.putNumber("relative position", m_encoder.getPosition());
+    SmartDashboard.putNumber("Relative Position", m_encoder.getPosition());
     SmartDashboard.putNumber("Absolute Position", m_encoder.getAbsolutePosition());
     SmartDashboard.putNumber("Difference", m_encoder.getPosition() - m_encoder.getAbsolutePosition());
     SmartDashboard.putNumber("velocity", m_encoder.getVelocity());
     SmartDashboard.putNumber("bus voltage", m_encoder.getBusVoltage());
+    SmartDashboard.putNumber("setpoint", m_setpoint);
   }
 
   @Override
@@ -120,6 +126,12 @@ public class Robot extends TimedRobot {
     if (m_joystick.getRawButtonPressed(4)) {
       m_setpoint = -90;
     }
+    if (m_joystick.getRawButtonPressed(11)) {
+      m_setpoint = -45; 
+    }
+    if (m_joystick.getRawButtonPressed(12)) {
+      m_setpoint = 45;
+    }
     if (m_joystick.getRawButtonPressed(5)) {
       m_encoder.setPosition(90);
     }
@@ -130,7 +142,7 @@ public class Robot extends TimedRobot {
       m_encoder.setPositionToAbsolute();
     }
     
-    m_motor.set(m_pid.calculate(m_encoder.getAbsolutePosition(), m_setpoint));
+  m_leadMotor.set(m_pid.calculate(m_encoder.getAbsolutePosition(), m_setpoint));
   }
 
   public void relativeTest() {
@@ -150,6 +162,6 @@ public class Robot extends TimedRobot {
       // I would expect it to try to repeat wherever it moved
       m_encoder.setPosition(0);
     }
-    m_motor.set(m_pid.calculate(m_encoder.getPosition(), m_setpoint));
+  m_leadMotor.set(m_pid.calculate(m_encoder.getPosition(), m_setpoint));
   }
 }
