@@ -68,29 +68,8 @@ public class Robot extends TimedRobot {
 
   @Override
   public void teleopPeriodic() {
-    if (m_joystick.getTriggerPressed()) {
-      m_setpoint = 0;
-    }
-    if (m_joystick.getTopPressed()) {
-      m_setpoint = 90;
-    }
-    if (m_joystick.getRawButtonPressed(3)) {
-      m_setpoint = -180;
-    }
-    if (m_joystick.getRawButtonPressed(4)) {
-      m_setpoint = -90;
-    }
-    if (m_joystick.getRawButtonPressed(5)) {
-      m_encoder.setPosition(90);
-    }
-    if (m_joystick.getRawButtonPressed(6)) {
-      m_encoder.setPosition(-90);
-    }
-    if (m_joystick.getRawButtonPressed(7)) {
-      m_encoder.setPositionToAbsolute();
-    }
-    
-    m_motor.set(m_pid.calculate(m_encoder.getAbsolutePosition(), m_setpoint));
+    absoluteTest();
+    // relativeTest();
     SmartDashboard.putNumber("relative position", m_encoder.getPosition());
     SmartDashboard.putNumber("Absolute Position", m_encoder.getAbsolutePosition());
     SmartDashboard.putNumber("Difference", m_encoder.getPosition() - m_encoder.getAbsolutePosition());
@@ -115,4 +94,51 @@ public class Robot extends TimedRobot {
 
   @Override
   public void simulationPeriodic() {}
+
+  public void absoluteTest() {
+    // Testing absolute
+    if (m_joystick.getTriggerPressed()) {
+      m_setpoint = 0;
+    }
+    if (m_joystick.getTopPressed()) {
+      m_setpoint = 90;
+    }
+    if (m_joystick.getRawButtonPressed(3)) {
+      m_setpoint = -180;
+    }
+    if (m_joystick.getRawButtonPressed(4)) {
+      m_setpoint = -90;
+    }
+    if (m_joystick.getRawButtonPressed(5)) {
+      m_encoder.setPosition(90);
+    }
+    if (m_joystick.getRawButtonPressed(6)) {
+      m_encoder.setPosition(-90);
+    }
+    if (m_joystick.getRawButtonPressed(7)) {
+      m_encoder.setPositionToAbsolute();
+    }
+    
+    m_motor.set(m_pid.calculate(m_encoder.getAbsolutePosition(), m_setpoint));
+  }
+
+  public void relativeTest() {
+    if (m_joystick.getTriggerPressed()) {
+      m_setpoint = 0;
+    } 
+    if (m_joystick.getTopPressed()) {
+      m_setpoint = 360 * 10;
+    }
+    if (m_joystick.getRawButtonPressed(3)) {
+      m_setpoint = 360 * 20;
+    }
+    if (m_joystick.getRawButtonPressed(4)) {
+      m_setpoint = 360 * 30;
+    }
+    if (m_joystick.getRawButtonPressed(5)) {
+      // I would expect it to try to repeat wherever it moved
+      m_encoder.setPosition(0);
+    }
+    m_motor.set(m_pid.calculate(m_encoder.getPosition(), m_setpoint));
+  }
 }
