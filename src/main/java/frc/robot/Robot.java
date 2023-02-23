@@ -12,8 +12,10 @@ import com.ctre.phoenix.sensors.SensorTimeBase;
 import com.ctre.phoenix.sensors.SensorVelocityMeasPeriod;
 import com.ctre.phoenix.sensors.WPI_CANCoder;
 import com.revrobotics.CANSparkMax;
+import com.revrobotics.RelativeEncoder;
 import com.revrobotics.CANSparkMaxLowLevel.MotorType;
 
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.TimedRobot;
@@ -30,16 +32,17 @@ public class Robot extends TimedRobot {
     RELATIVE,
     ABSOLUTE
   }
-  TestMode m_mode = TestMode.ABSOLUTE;
+  TestMode m_mode = TestMode.RELATIVE;
 
   Joystick m_joystick = new Joystick(0);
-  public static final int ENCODER_ID = 3;
-  public static final int MOTOR_ID = 1;
-  public static final int FOLLOW_MOTOR_ID = 2;
-  WPI_CANCoder m_encoder;
+  public static final int CANCODER_ID = 0;
+  public static final int LEAD_MOTOR_ID = 1;
+  public static final int FOLLOW_MOTOR_ID = 3;
+  WPI_CANCoder m_cancoder;
   CANSparkMax m_leadMotor;
   CANSparkMax m_followMotor;
-  PIDController m_pid = new PIDController(0, 0, 0);
+  RelativeEncoder m_internal;
+  PIDController m_pid = new PIDController(0.005, 0, 0);
   double m_setpoint = 0;
   
   /**
@@ -48,11 +51,13 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void robotInit() {
-    m_encoder = new WPI_CANCoder(ENCODER_ID);
-    m_leadMotor = new CANSparkMax(MOTOR_ID, MotorType.kBrushless);
+    m_cancoder = new WPI_CANCoder(CANCODER_ID);
+    m_leadMotor = new CANSparkMax(LEAD_MOTOR_ID, MotorType.kBrushless);
     m_followMotor = new CANSparkMax(FOLLOW_MOTOR_ID, MotorType.kBrushless);
     m_followMotor.follow(m_leadMotor);
 
+    m_internal = m_leadMotor.getEncoder();
+    m_internal.setPosition(0);
     CANCoderConfiguration config = new CANCoderConfiguration();
     config.sensorCoefficient = 360/4096;
     config.unitString = "degrees";
@@ -61,7 +66,9 @@ public class Robot extends TimedRobot {
     config.absoluteSensorRange = AbsoluteSensorRange.Signed_PlusMinus180;
     config.sensorDirection = false;
     config.initializationStrategy = SensorInitializationStrategy.BootToAbsolutePosition;
-    m_encoder.configAllSettings(config);
+    
+    m_cancoder.configAllSettings(config);
+    m_cancoder.configMagnetOffset(-m_cancoder.getAbsolutePosition());
     if (m_mode == TestMode.ABSOLUTE) {
       m_pid.enableContinuousInput(-180, 180);
     }
@@ -82,15 +89,17 @@ public class Robot extends TimedRobot {
   @Override
   public void teleopPeriodic() {
     if (m_mode == TestMode.ABSOLUTE) {
-      absoluteTest();
+      // absoluteTest();
     } else {
-      relativeTest();
+      // relativeTest();
     }
-    SmartDashboard.putNumber("Relative Position", m_encoder.getPosition());
-    SmartDashboard.putNumber("Absolute Position", m_encoder.getAbsolutePosition());
-    SmartDashboard.putNumber("Difference", m_encoder.getPosition() - m_encoder.getAbsolutePosition());
-    SmartDashboard.putNumber("velocity", m_encoder.getVelocity());
-    SmartDashboard.putNumber("bus voltage", m_encoder.getBusVoltage());
+    m_leadMotor.set(0);
+    SmartDashboard.putNumber("Internal Position", m_internal.getPosition());
+    SmartDashboard.putNumber("Relative Position", m_cancoder.getPosition());
+    SmartDashboard.putNumber("Absolute Position", m_cancoder.getAbsolutePosition());
+    SmartDashboard.putNumber("Difference", m_cancoder.getPosition() - m_cancoder.getAbsolutePosition());
+    SmartDashboard.putNumber("velocity", m_cancoder.getVelocity());
+    SmartDashboard.putNumber("bus voltage", m_cancoder.getBusVoltage());
     SmartDashboard.putNumber("setpoint", m_setpoint);
   }
 
@@ -133,16 +142,15 @@ public class Robot extends TimedRobot {
       m_setpoint = 45;
     }
     if (m_joystick.getRawButtonPressed(5)) {
-      m_encoder.setPosition(90);
+      m_cancoder.setPosition(90);
     }
     if (m_joystick.getRawButtonPressed(6)) {
-      m_encoder.setPosition(-90);
+      m_cancoder.setPosition(-90);
     }
     if (m_joystick.getRawButtonPressed(7)) {
-      m_encoder.setPositionToAbsolute();
+      m_cancoder.setPositionToAbsolute();
     }
-    
-  m_leadMotor.set(m_pid.calculate(m_encoder.getAbsolutePosition(), m_setpoint));
+    m_leadMotor.set(MathUtil.clamp(-m_pid.calculate(m_cancoder.getAbsolutePosition(), m_setpoint), -0.15, 0.15));
   }
 
   public void relativeTest() {
@@ -150,18 +158,18 @@ public class Robot extends TimedRobot {
       m_setpoint = 0;
     } 
     if (m_joystick.getTopPressed()) {
-      m_setpoint = 360 * 10;
+      m_setpoint = 360 * 1;
     }
     if (m_joystick.getRawButtonPressed(3)) {
-      m_setpoint = 360 * 20;
+      m_setpoint = 360 * 2;
     }
     if (m_joystick.getRawButtonPressed(4)) {
-      m_setpoint = 360 * 30;
+      m_setpoint = 360 * 3;
     }
     if (m_joystick.getRawButtonPressed(5)) {
       // I would expect it to try to repeat wherever it moved
-      m_encoder.setPosition(0);
+      m_cancoder.setPosition(0);
     }
-  m_leadMotor.set(m_pid.calculate(m_encoder.getPosition(), m_setpoint));
+  m_leadMotor.set(MathUtil.clamp(-m_pid.calculate(m_cancoder.getAbsolutePosition(), m_setpoint), -0.15, 0.15));
   }
 }
